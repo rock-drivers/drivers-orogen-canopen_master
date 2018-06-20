@@ -1,0 +1,15 @@
+name "canopen_master"
+
+import_types_from "canbus"
+using_library 'canopen_master'
+import_types_from 'canopen_master/PDOCommunicationParameters.hpp'
+
+typekit.export_types 'canopen_master/PDOCommunicationParameters'
+
+# Task that generates SYNC messages
+task_context "SyncTask" do
+    needs_configuration
+
+    # Sending of CAN messages
+    output_port "can_out", "/canbus/Message"
+end
