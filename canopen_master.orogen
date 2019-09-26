@@ -1,15 +1,26 @@
-name "canopen_master"
+name 'canopen_master'
 
-import_types_from "canbus"
+import_types_from 'canbus'
 using_library 'canopen_master'
 import_types_from 'canopen_master/PDOCommunicationParameters.hpp'
 
 typekit.export_types 'canopen_master/PDOCommunicationParameters'
 
+# Task containing basic features needed to integrate a canopen_master driver
+task_context 'SlaveTask' do
+    abstract
+    needs_configuration
+
+    property 'node_id', '/int'
+
+    input_port 'can_in', '/canbus/Message'
+    output_port 'can_out', '/canbus/Message'
+end
+
 # Task that generates SYNC messages
-task_context "SyncTask" do
+task_context 'SyncTask' do
     needs_configuration
 
     # Sending of CAN messages
-    output_port "can_out", "/canbus/Message"
+    output_port 'can_out', '/canbus/Message'
 end
