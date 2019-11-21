@@ -9,4 +9,5 @@
   <depend package="base/cmake" />
   <depend package="drivers/canopen_master" />
   <depend package="drivers/orogen/canbus" />
+  <test_depend package="tools/syskit" />
 </package>

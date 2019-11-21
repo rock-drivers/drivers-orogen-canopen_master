@@ -23,14 +23,16 @@ SlaveTask::~SlaveTask()
 
 bool SlaveTask::configureHook()
 {
-    if (! SlaveTaskBase::configureHook())
+    if (! SlaveTaskBase::configureHook()) {
         return false;
+    }
     return true;
 }
 bool SlaveTask::startHook()
 {
-    if (! SlaveTaskBase::startHook())
+    if (! SlaveTaskBase::startHook()) {
         return false;
+    }
     return true;
 }
 void SlaveTask::updateHook()
@@ -57,77 +59,94 @@ class canopen_master::HeartbeatScope
 {
     SlaveTask& m_task;
     Slave& m_slave;
-    uint32_t m_current_period;
+    base::Time m_period;
+    base::Time m_current_period;
+    base::Time m_timeout;
 
 public:
     HeartbeatScope(SlaveTask& task,
                    base::Time const& period,
+                   base::Time const& current_period,
                    base::Time const& timeout = base::Time::fromSeconds(1))
         : m_task(task)
         , m_slave(*task.m_slave)
-        , m_current_period(m_slave.get<ProducerHeartbeatTime>()) {
+        , m_period(period)
+        , m_current_period(current_period)
+        , m_timeout(timeout) {
+
+        if (period == m_current_period) {
+            return;
+        }
 
         m_task.writeSDO(
-            m_slave.queryDownload<ProducerHeartbeatTime>(period.toMilliseconds()),
-            timeout
+            m_slave.queryDownload<ProducerHeartbeatTime>(
+                period.toMilliseconds()
+            ),
+            m_timeout
+        );
+    }
+
+    ~HeartbeatScope() {
+        if (m_period == m_current_period) {
+            return;
+        }
+
+        m_task.writeSDO(
+            m_slave.queryDownload<ProducerHeartbeatTime>(
+                m_current_period.toMilliseconds()
+            ),
+            m_timeout
         );
     }
 };
 
-NODE_STATE SlaveTask::getNMTState(base::Time deadline) {
-    // Setup a fast heartbeat time to get
-    HeartbeatScope heartbeat(*this, base::Time::fromMilliseconds(10));
-    _can_out.write(m_slave->queryNodeState());
-
-    while(base::Time::now() < deadline)
-    {
-        usleep(POLL_PERIOD_US);
-
-        canbus::Message msg;
-        while (_can_in.read(msg, false) == RTT::NewData) {
-            auto update = m_slave->process(msg);
-            if (update == StateMachine::PROCESSED_HEARTBEAT) {
-                return m_slave->getNodeState();
-            }
-        }
-    }
-
-    throw NMTTimeout();
+base::Time SlaveTask::getHeartbeatPeriod() const {
+    return m_heartbeat_period;
 }
+void SlaveTask::setHeartbeatPeriod(base::Time const& time) {
+    m_heartbeat_period = time;
+}
+
 
 void SlaveTask::toNMTState(NODE_STATE desiredState,
     NODE_STATE_TRANSITION transition,
-    base::Time timeout)
-{
-    base::Time deadline = base::Time::now() + timeout;
-    auto currentState = getNMTState(deadline);
-    if (currentState == desiredState)
-        return;
+    base::Time heartbeat_period,
+    base::Time timeout
+) {
+    if (transition == NODE_RESET_COMMUNICATION) {
+        toNMTStateInternal(desiredState, transition, timeout);
+    }
+    else {
+        HeartbeatScope heartbeat(
+            *this, heartbeat_period, m_heartbeat_period, timeout
+        );
+        toNMTStateInternal(desiredState, transition, timeout);
+    }
+}
 
-    std::default_random_engine generator;
-    std::uniform_int_distribution<int> distribution(1000, 5000);
+void SlaveTask::toNMTStateInternal(
+    NODE_STATE desiredState,
+    NODE_STATE_TRANSITION transition,
+    base::Time timeout
+) {
+    base::Time deadline = base::Time::now() + timeout;
 
     _can_out.write(m_slave->queryNodeStateTransition(transition));
     while (base::Time::now() < deadline) {
         usleep(NMT_DEAD_TIME_US);
-        try {
-            auto state = getNMTState(base::Time::now() + base::Time::fromMilliseconds(100));
-            if (desiredState == NODE_PRE_OPERATIONAL && state == 0x10) {
-                return;
+
+        canbus::Message message;
+        while (_can_in.read(message, false) == RTT::NewData) {
+            auto update = m_slave->process(message);
+            if (update.mode == StateMachine::PROCESSED_HEARTBEAT) {
+                if (m_slave->getNodeState() == desiredState) {
+                    return;
+                }
             }
-            if (state == desiredState) {
-                return;
-            }
-        }
-        catch(NMTTimeout const&) {
-            usleep(distribution(generator));
-            _can_out.write(m_slave->queryNodeStateTransition(transition));
-        }
-        catch(EmergencyMessageReceived const&) {
-            usleep(distribution(generator));
-            _can_out.write(m_slave->queryNodeStateTransition(transition));
         }
     }
+    exception(NMT_TIMEOUT);
+    throw NMTTimeout();
 }
 
 void SlaveTask::readSDOs(std::vector<canbus::Message> const& queries,
@@ -145,19 +164,20 @@ void SlaveTask::readSDO(canbus::Message const& query,
     int objectSubId = getSDOObjectSubID(query);
 
     base::Time deadline = base::Time::now() + timeout;
-    while(true)
+    while (true)
     {
         usleep(POLL_PERIOD_US);
 
         canbus::Message msg;
         if (_can_in.read(msg, false) == RTT::NewData) {
             auto update = m_slave->process(msg);
-            if (update == StateMachine::PROCESSED_SDO &&
+            if (update.mode == StateMachine::PROCESSED_SDO &&
                 update.hasUpdatedObject(objectId, objectSubId)) {
                 return;
             }
         }
         if (base::Time::now() > deadline) {
+            exception(SDO_TIMEOUT);
             throw SDOReadTimeout();
         }
     }
@@ -178,21 +198,20 @@ void SlaveTask::writeSDO(canbus::Message const& query, base::Time timeout)
     uint16_t objectSubId = getSDOObjectSubID(query);
 
     base::Time deadline = base::Time::now() + timeout;
-    while(true)
+    while (true)
     {
         canbus::Message msg;
         if (_can_in.read(msg, false) == RTT::NewData) {
             auto update = m_slave->process(msg);
-            if (update == StateMachine::PROCESSED_SDO_INITIATE_DOWNLOAD &&
+            if (update.mode == StateMachine::PROCESSED_SDO_INITIATE_DOWNLOAD &&
                 update.hasUpdatedObject(objectId, objectSubId)) {
                 return;
             }
         }
         if (base::Time::now() > deadline) {
+            exception(SDO_TIMEOUT);
             throw SDOWriteTimeout();
         }
         usleep(POLL_PERIOD_US);
     }
 }
-
-
