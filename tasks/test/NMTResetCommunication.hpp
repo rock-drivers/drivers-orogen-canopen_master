@@ -1,92 +1,45 @@
 /* Generated from orogen/lib/orogen/templates/tasks/Task.hpp */
 
-#ifndef CANOPEN_MASTER_SLAVETASK_TASK_HPP
-#define CANOPEN_MASTER_SLAVETASK_TASK_HPP
+#ifndef CANOPEN_MASTER__TEST_NMTRESETCOMMUNICATION_TASK_HPP
+#define CANOPEN_MASTER__TEST_NMTRESETCOMMUNICATION_TASK_HPP
 
-#include "canopen_master/SlaveTaskBase.hpp"
-#include <base/Time.hpp>
-#include <canopen_master/Frame.hpp>
+#include "canopen_master/test/NMTResetCommunicationBase.hpp"
 
 namespace canopen_master{
-    class Slave;
-    struct HeartbeatScope;
+    class StateMachine;
+namespace test{
 
-    struct NMTTimeout : std::runtime_error
-    {
-        NMTTimeout()
-            : std::runtime_error("NMT Transition Timed Out") {}
-    };
 
-    struct SDOWriteTimeout : std::runtime_error
-    {
-        SDOWriteTimeout()
-            : std::runtime_error("SDO Write Timeout") {}
-    };
-
-    struct SDOReadTimeout : std::runtime_error
-    {
-        SDOReadTimeout()
-            : std::runtime_error("SDO Read Timeout") {}
-    };
-
-    /*! \class SlaveTask
+    /*! \class NMTResetCommunication
      * \brief The task context provides and requires services. It uses an ExecutionEngine to perform its functions.
      * Essential interfaces are operations, data flow ports and properties. These interfaces have been defined using the oroGen specification.
      * In order to modify the interfaces you should (re)use oroGen and rely on the associated workflow.
-     * Task containing basic features needed to integrate a canopen_master driver
+     *
      * \details
      * The name of a TaskContext is primarily defined via:
      \verbatim
      deployment 'deployment_name'
-         task('custom_task_name','canopen_master::SlaveTask')
+         task('custom_task_name','canopen_master::NMTResetCommunication')
      end
      \endverbatim
      *  It can be dynamically adapted when the deployment is called with a prefix argument.
      */
-    class SlaveTask : public SlaveTaskBase
+    class NMTResetCommunication : public NMTResetCommunicationBase
     {
-        friend class SlaveTaskBase;
-        friend class HeartbeatScope;
-
-        void toNMTStateInternal(
-            NODE_STATE desiredState,
-            NODE_STATE_TRANSITION transition,
-            base::Time timeout = base::Time::fromSeconds(1)
-        );
-
+	friend class NMTResetCommunicationBase;
     protected:
-        Slave* m_slave = nullptr;
-        base::Time m_heartbeat_period = base::Time::fromSeconds(1);
-
-        base::Time getHeartbeatPeriod() const;
-        void setHeartbeatPeriod(base::Time const& time);
-
-        NODE_STATE getNMTState(base::Time deadline);
-        void toNMTState(
-            NODE_STATE desiredState,
-            NODE_STATE_TRANSITION transition,
-            base::Time heartbeat_period = base::Time::fromMilliseconds(100),
-            base::Time timeout = base::Time::fromSeconds(1)
-        );
-        void readSDOs(std::vector<canbus::Message> const& queries,
-                      base::Time timeout = base::Time::fromSeconds(1));
-        void readSDO(canbus::Message const& query,
-                     base::Time timeout = base::Time::fromSeconds(1));
-        void writeSDOs(std::vector<canbus::Message> const& queries,
-                       base::Time timeout = base::Time::fromSeconds(1));
-        void writeSDO(canbus::Message const& query,
-                      base::Time timeout = base::Time::fromSeconds(1));
+        StateMachine* m_state_machine = nullptr;
 
     public:
-        /** TaskContext constructor for SlaveTask
+        /** TaskContext constructor for NMTResetCommunication
          * \param name Name of the task. This name needs to be unique to make it identifiable via nameservices.
          * \param initial_state The initial TaskState of the TaskContext. Default is Stopped state.
          */
-        SlaveTask(std::string const& name = "canopen_master::SlaveTask");
+        NMTResetCommunication(std::string const& name = "canopen_master::test::NMTResetCommunication");
 
-        /** Default deconstructor of SlaveTask
+        /** Default deconstructor of NMTResetCommunication
          */
-	~SlaveTask();
+	~NMTResetCommunication();
 
         /** This hook is called by Orocos when the state machine transitions
          * from PreOperational to Stopped. If it returns false, then the
@@ -146,6 +99,7 @@ namespace canopen_master{
          */
         void cleanupHook();
     };
+}
 }
 
 #endif

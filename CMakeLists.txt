@@ -1,9 +1,11 @@
-PROJECT(canopen_master)
+project(canopen_master)
 cmake_minimum_required(VERSION 2.6)
 
-SET (CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/.orogen/config")
-INCLUDE(canopen_masterBase)
+set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/.orogen/config")
+include(canopen_masterBase)
 
-# FIND_PACKAGE(KDL)
-# FIND_PACKAGE(OCL)
-
+if (ROCK_TEST_ENABLED)
+    enable_testing()
+    find_package(Syskit REQUIRED)
+    syskit_orogen_tests(test)
+endif()
