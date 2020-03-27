@@ -77,6 +77,10 @@ namespace canopen_master{
         void writeSDO(canbus::Message const& query,
                       base::Time timeout = base::Time::fromSeconds(1));
 
+        void writeProducerHeartbeatPeriod(
+            base::Time const& period, base::Time const& timeout
+        );
+
     public:
         /** TaskContext constructor for SlaveTask
          * \param name Name of the task. This name needs to be unique to make it identifiable via nameservices.

@@ -57,6 +57,8 @@ void ReadSDO::stopHook()
 void ReadSDO::cleanupHook()
 {
     delete m_slave;
+    m_slave = nullptr;
     delete m_state_machine;
+    m_state_machine = nullptr;
     ReadSDOBase::cleanupHook();
 }

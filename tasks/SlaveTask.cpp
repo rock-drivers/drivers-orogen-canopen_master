@@ -55,47 +55,6 @@ void SlaveTask::cleanupHook()
 static const int POLL_PERIOD_US = 10000;
 static const int NMT_DEAD_TIME_US = 10000;
 
-class canopen_master::HeartbeatScope
-{
-    SlaveTask& m_task;
-    Slave& m_slave;
-    base::Time m_period;
-    base::Time m_current_period;
-    base::Time m_timeout;
-
-public:
-    HeartbeatScope(SlaveTask& task,
-                   base::Time const& period,
-                   base::Time const& current_period,
-                   base::Time const& timeout = base::Time::fromSeconds(1))
-        : m_task(task)
-        , m_slave(*task.m_slave)
-        , m_period(period)
-        , m_current_period(current_period)
-        , m_timeout(timeout) {
-
-        m_task.writeSDO(
-            m_slave.queryDownload<ProducerHeartbeatTime>(
-                period.toMilliseconds()
-            ),
-            m_timeout
-        );
-    }
-
-    ~HeartbeatScope() {
-        if (m_period == m_current_period) {
-            return;
-        }
-
-        m_task.writeSDO(
-            m_slave.queryDownload<ProducerHeartbeatTime>(
-                m_current_period.toMilliseconds()
-            ),
-            m_timeout
-        );
-    }
-};
-
 base::Time SlaveTask::getHeartbeatPeriod() const {
     return m_heartbeat_period;
 }
@@ -112,11 +71,26 @@ void SlaveTask::toNMTState(NODE_STATE desiredState,
         toNMTStateInternal(desiredState, transition, timeout);
     }
     else {
-        HeartbeatScope heartbeat(
-            *this, heartbeat_period, m_heartbeat_period, timeout
-        );
-        toNMTStateInternal(desiredState, transition, timeout);
+        writeProducerHeartbeatPeriod(heartbeat_period, timeout);
+
+        try {
+            toNMTStateInternal(desiredState, transition, timeout);
+        }
+        catch (...) {
+            writeProducerHeartbeatPeriod(m_heartbeat_period, timeout);
+            throw;
+        }
+        writeProducerHeartbeatPeriod(m_heartbeat_period, timeout);
     }
+}
+
+void SlaveTask::writeProducerHeartbeatPeriod(
+    base::Time const& period, base::Time const& timeout
+) {
+    writeSDO(
+        m_slave->queryDownload<ProducerHeartbeatTime>(period.toMilliseconds()),
+        timeout
+    );
 }
 
 void SlaveTask::toNMTStateInternal(
