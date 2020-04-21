@@ -165,6 +165,7 @@ describe OroGen.canopen_master.SlaveTask do
 
     def make_sdo_upload_reply(node_id, object_id, object_sub_id, *bytes)
         Types.canbus.Message.new(
+            time: Time.now,
             can_id: (0x580 + node_id), size: 8,
             data: [
                 0x43 | ((4 - bytes.size) << 2),
@@ -190,6 +191,7 @@ describe OroGen.canopen_master.SlaveTask do
 
     def make_sdo_download_reply(node_id, object_id, object_sub_id)
         Types.canbus.Message.new(
+            time: Time.now,
             can_id: (0x580 + node_id), size: 8,
             data: [
                 0x60,
@@ -207,6 +209,7 @@ describe OroGen.canopen_master.SlaveTask do
 
     def make_heartbeat(node_id, state)
         Types.canbus.Message.new(
+            time: Time.now,
             can_id: 1792 + node_id,
             size: 1,
             data: [state, 0, 0, 0, 0, 0, 0, 0]
