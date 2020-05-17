@@ -61,6 +61,12 @@ base::Time SlaveTask::getHeartbeatPeriod() const {
 void SlaveTask::setHeartbeatPeriod(base::Time const& time) {
     m_heartbeat_period = time;
 }
+Slave* SlaveTask::getSlave() const {
+    return m_slave;
+}
+void SlaveTask::setSlave(Slave* slave) {
+    m_slave = slave;
+}
 
 void SlaveTask::toNMTState(NODE_STATE desiredState,
     NODE_STATE_TRANSITION transition,
