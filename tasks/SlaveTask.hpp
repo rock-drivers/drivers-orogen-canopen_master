@@ -60,6 +60,8 @@ namespace canopen_master{
 
         base::Time getHeartbeatPeriod() const;
         void setHeartbeatPeriod(base::Time const& time);
+        Slave* getSlave() const;
+        void setSlave(Slave *slave);
 
         NODE_STATE getNMTState(base::Time deadline);
         void toNMTState(

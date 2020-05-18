@@ -61,26 +61,35 @@ base::Time SlaveTask::getHeartbeatPeriod() const {
 void SlaveTask::setHeartbeatPeriod(base::Time const& time) {
     m_heartbeat_period = time;
 }
+Slave* SlaveTask::getSlave() const {
+    return m_slave;
+}
+void SlaveTask::setSlave(Slave* slave) {
+    m_slave = slave;
+}
 
 void SlaveTask::toNMTState(NODE_STATE desiredState,
     NODE_STATE_TRANSITION transition,
     base::Time heartbeat_period,
     base::Time timeout
 ) {
-    if (transition == NODE_RESET || transition == NODE_RESET_COMMUNICATION) {
-        toNMTStateInternal(desiredState, transition, timeout);
-    }
-    else {
-        writeProducerHeartbeatPeriod(heartbeat_period, timeout);
-
-        try {
+    switch (transition) {
+        case NODE_RESET:
+        case NODE_RESET_COMMUNICATION:
+        case NODE_STOP:
             toNMTStateInternal(desiredState, transition, timeout);
-        }
-        catch (...) {
+            break;
+        default:
+            writeProducerHeartbeatPeriod(heartbeat_period, timeout);
+            try {
+                toNMTStateInternal(desiredState, transition, timeout);
+            }
+            catch (...) {
+                writeProducerHeartbeatPeriod(m_heartbeat_period, timeout);
+                throw;
+            }
             writeProducerHeartbeatPeriod(m_heartbeat_period, timeout);
-            throw;
-        }
-        writeProducerHeartbeatPeriod(m_heartbeat_period, timeout);
+            break;
     }
 }
 

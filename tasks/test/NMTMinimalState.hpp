@@ -1,16 +1,16 @@
 /* Generated from orogen/lib/orogen/templates/tasks/Task.hpp */
 
-#ifndef CANOPEN_MASTER__TEST_NMTRESETCOMMUNICATION_TASK_HPP
-#define CANOPEN_MASTER__TEST_NMTRESETCOMMUNICATION_TASK_HPP
+#ifndef CANOPEN_MASTER__TEST_NMTMINIMALSTATE_TASK_HPP
+#define CANOPEN_MASTER__TEST_NMTMINIMALSTATE_TASK_HPP
 
-#include "canopen_master/test/NMTResetCommunicationBase.hpp"
+#include "canopen_master/test/NMTMinimalStateBase.hpp"
 
 namespace canopen_master{
     class StateMachine;
 namespace test{
 
 
-    /*! \class NMTResetCommunication
+    /*! \class NMTMinimalState
      * \brief The task context provides and requires services. It uses an ExecutionEngine to perform its functions.
      * Essential interfaces are operations, data flow ports and properties. These interfaces have been defined using the oroGen specification.
      * In order to modify the interfaces you should (re)use oroGen and rely on the associated workflow.
@@ -19,27 +19,27 @@ namespace test{
      * The name of a TaskContext is primarily defined via:
      \verbatim
      deployment 'deployment_name'
-         task('custom_task_name','canopen_master::NMTResetCommunication')
+         task('custom_task_name','canopen_master::NMTMinimalState')
      end
      \endverbatim
      *  It can be dynamically adapted when the deployment is called with a prefix argument.
      */
-    class NMTResetCommunication : public NMTResetCommunicationBase
+    class NMTMinimalState : public NMTMinimalStateBase
     {
-	friend class NMTResetCommunicationBase;
+	friend class NMTMinimalStateBase;
     protected:
         StateMachine* m_state_machine = nullptr;
 
     public:
-        /** TaskContext constructor for NMTResetCommunication
+        /** TaskContext constructor for NMTMinimalState
          * \param name Name of the task. This name needs to be unique to make it identifiable via nameservices.
          * \param initial_state The initial TaskState of the TaskContext. Default is Stopped state.
          */
-        NMTResetCommunication(std::string const& name = "canopen_master::test::NMTResetCommunication");
+        NMTMinimalState(std::string const& name = "canopen_master::test::NMTMinimalState");
 
-        /** Default deconstructor of NMTResetCommunication
+        /** Default deconstructor of NMTMinimalState
          */
-	~NMTResetCommunication();
+	~NMTMinimalState();
 
         /** This hook is called by Orocos when the state machine transitions
          * from PreOperational to Stopped. If it returns false, then the
