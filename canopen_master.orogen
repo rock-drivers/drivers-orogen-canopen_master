@@ -41,7 +41,9 @@ end
 task_context "test::WriteSDO", subclasses: "SlaveTask" do
 end
 
-task_context "test::NMTResetCommunication", subclasses: "SlaveTask" do
+task_context "test::NMTMinimalState", subclasses: "SlaveTask" do
+    property "state_target", "/uint8_t"
+    property "state_transition", "/uint8_t"
 end
 
 task_context "test::NMTStateChange", subclasses: "SlaveTask" do

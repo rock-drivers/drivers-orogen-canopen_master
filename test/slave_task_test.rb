@@ -82,13 +82,18 @@ describe OroGen.canopen_master.SlaveTask do
         end
     end
 
-    describe "NMT RESET transition" do
+    # Tests for minimal state transitions
+    def self.nmt_minimal_state_tests
         attr_reader :task
         before do
             @task = syskit_deploy(
-                OroGen.canopen_master.test.NMTResetCommunication.deployed_as("nmt")
+                OroGen.canopen_master.test.NMTMinimalState.deployed_as("nmt")
             )
+
             task.properties.node_id = 0x42
+            task.properties.state_target = state_target
+            task.properties.state_transition = state_transition
+
             syskit_configure(task)
             @sample = expect_execution { task.start! }
                       .to { have_one_new_sample task.can_out_port }
@@ -96,20 +101,34 @@ describe OroGen.canopen_master.SlaveTask do
 
         it "sends the NMT reset communication message and waits for the node "\
            "to send the bootup message" do
-            assert_nmt(@sample, 0x42, 130)
-            expect_on_can_in(make_heartbeat(0x42, 0))
+            assert_nmt(@sample, 0x42, state_transition)
+            expect_on_can_in(make_heartbeat(0x42, state_target))
                 .to { emit task.stop_event }
         end
 
         it "ignores a heartbeat from another node" do
-            expect_on_can_in(make_heartbeat(0x41, 0))
+            expect_on_can_in(make_heartbeat(0x41, state_target))
                 .to { emit task.nmt_timeout_event }
         end
 
-        it "ignores a heartbeat that indicate a different state than pre-operational" do
-            expect_on_can_in(make_heartbeat(0x42, 1))
+        it "ignores a heartbeat that indicates a different state than the target state" do
+            expect_on_can_in(make_heartbeat(0x42, state_target + 10))
                 .to { emit task.nmt_timeout_event }
         end
+    end
+
+    describe "NMT RESET transition" do
+        let(:state_target) { 0 }
+        let(:state_transition) { 130 }
+
+        nmt_minimal_state_tests
+    end
+
+    describe "NMT STOP transition" do
+        let(:state_target) { 4 }
+        let(:state_transition) { 2 }
+
+        nmt_minimal_state_tests
     end
 
     describe "NMT transition that is not RESET" do
