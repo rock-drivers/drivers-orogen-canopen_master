@@ -145,7 +145,9 @@ void SlaveTask::readSDO(canbus::Message const& query,
     int objectId = getSDOObjectID(query);
     int objectSubId = getSDOObjectSubID(query);
 
+    base::Time tic = base::Time::now();
     base::Time deadline = base::Time::now() + timeout;
+    int discarded_messages = 0;
     while (true)
     {
         usleep(POLL_PERIOD_US);
@@ -155,10 +157,17 @@ void SlaveTask::readSDO(canbus::Message const& query,
             auto update = m_slave->process(msg);
             if (update.mode == StateMachine::PROCESSED_SDO &&
                 update.hasUpdatedObject(objectId, objectSubId)) {
+                if (discarded_messages) {
+                    std::cerr << "got expected SDO reply after " << discarded_messages << "messages and " << (base::Time::now() - tic).toSeconds() << " seconds" << std::endl;
+                }
                 return;
+            }
+            else {
+                ++discarded_messages;
             }
         }
         if (base::Time::now() > deadline) {
+            std::cerr << "got SDO_TIMEOUT after " << discarded_messages << "messages" << std::endl;
             exception(SDO_TIMEOUT);
             throw SDOReadTimeout();
         }
