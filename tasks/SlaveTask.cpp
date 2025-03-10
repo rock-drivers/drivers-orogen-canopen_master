@@ -158,7 +158,7 @@ void SlaveTask::readSDO(canbus::Message const& query,
             if (update.mode == StateMachine::PROCESSED_SDO &&
                 update.hasUpdatedObject(objectId, objectSubId)) {
                 if (discarded_messages) {
-                    std::cerr << "got expected SDO reply after " << discarded_messages << "messages and " << (base::Time::now() - tic).toSeconds() << " seconds" << std::endl;
+                    std::cerr << "got read expected SDO reply after " << discarded_messages << "messages and " << (base::Time::now() - tic).toSeconds() << " seconds" << std::endl;
                 }
                 return;
             }
@@ -167,7 +167,7 @@ void SlaveTask::readSDO(canbus::Message const& query,
             }
         }
         if (base::Time::now() > deadline) {
-            std::cerr << "got SDO_TIMEOUT after " << discarded_messages << "messages" << std::endl;
+            std::cerr << "got read SDO_TIMEOUT after " << discarded_messages << "messages" << std::endl;
             exception(SDO_TIMEOUT);
             throw SDOReadTimeout();
         }
@@ -188,7 +188,9 @@ void SlaveTask::writeSDO(canbus::Message const& query, base::Time timeout)
     uint16_t objectId = getSDOObjectID(query);
     uint16_t objectSubId = getSDOObjectSubID(query);
 
+    base::Time tic = base::Time::now();
     base::Time deadline = base::Time::now() + timeout;
+    int discarded_messages = 0;
     while (true)
     {
         canbus::Message msg;
@@ -196,10 +198,17 @@ void SlaveTask::writeSDO(canbus::Message const& query, base::Time timeout)
             auto update = m_slave->process(msg);
             if (update.mode == StateMachine::PROCESSED_SDO_INITIATE_DOWNLOAD &&
                 update.hasUpdatedObject(objectId, objectSubId)) {
+                if (discarded_messages) {
+                    std::cerr << "got write expected SDO reply after " << discarded_messages << "messages and " << (base::Time::now() - tic).toSeconds() << " seconds" << std::endl;
+                }
                 return;
+            }
+            else {
+                ++discarded_messages;
             }
         }
         if (base::Time::now() > deadline) {
+            std::cerr << "got write SDO_TIMEOUT after " << discarded_messages << "messages" << std::endl;
             exception(SDO_TIMEOUT);
             throw SDOWriteTimeout();
         }
