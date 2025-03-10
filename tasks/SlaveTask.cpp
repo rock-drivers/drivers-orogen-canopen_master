@@ -148,16 +148,16 @@ void SlaveTask::readSDO(canbus::Message const& query,
     base::Time deadline = base::Time::now() + timeout;
     while (true)
     {
-        usleep(POLL_PERIOD_US);
-
         canbus::Message msg;
-        if (_can_in.read(msg, false) == RTT::NewData) {
+        while (_can_in.read(msg, false) == RTT::NewData) {
             auto update = m_slave->process(msg);
             if (update.mode == StateMachine::PROCESSED_SDO &&
                 update.hasUpdatedObject(objectId, objectSubId)) {
                 return;
             }
         }
+        usleep(POLL_PERIOD_US);
+
         if (base::Time::now() > deadline) {
             exception(SDO_TIMEOUT);
             throw SDOReadTimeout();
