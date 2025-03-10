@@ -150,10 +150,8 @@ void SlaveTask::readSDO(canbus::Message const& query,
     int discarded_messages = 0;
     while (true)
     {
-        usleep(POLL_PERIOD_US);
-
         canbus::Message msg;
-        if (_can_in.read(msg, false) == RTT::NewData) {
+        while (_can_in.read(msg, false) == RTT::NewData) {
             auto update = m_slave->process(msg);
             if (update.mode == StateMachine::PROCESSED_SDO &&
                 update.hasUpdatedObject(objectId, objectSubId)) {
@@ -171,6 +169,7 @@ void SlaveTask::readSDO(canbus::Message const& query,
             exception(SDO_TIMEOUT);
             throw SDOReadTimeout();
         }
+        usleep(POLL_PERIOD_US);
     }
 }
 
@@ -194,7 +193,7 @@ void SlaveTask::writeSDO(canbus::Message const& query, base::Time timeout)
     while (true)
     {
         canbus::Message msg;
-        if (_can_in.read(msg, false) == RTT::NewData) {
+        while (_can_in.read(msg, false) == RTT::NewData) {
             auto update = m_slave->process(msg);
             if (update.mode == StateMachine::PROCESSED_SDO_INITIATE_DOWNLOAD &&
                 update.hasUpdatedObject(objectId, objectSubId)) {
@@ -212,6 +211,7 @@ void SlaveTask::writeSDO(canbus::Message const& query, base::Time timeout)
             exception(SDO_TIMEOUT);
             throw SDOWriteTimeout();
         }
+
         usleep(POLL_PERIOD_US);
     }
 }
