@@ -141,27 +141,40 @@ void SlaveTask::readSDOs(std::vector<canbus::Message> const& queries,
 void SlaveTask::readSDO(canbus::Message const& query,
     base::Time timeout)
 {
+    std::cerr << base::Time::now() << " entering readSDO" << std::endl;
+
     _can_out.write(query);
     int objectId = getSDOObjectID(query);
     int objectSubId = getSDOObjectSubID(query);
 
+    base::Time tic = base::Time::now();
     base::Time deadline = base::Time::now() + timeout;
+    int discarded_messages = 0;
     while (true)
     {
-        usleep(POLL_PERIOD_US);
-
         canbus::Message msg;
-        if (_can_in.read(msg, false) == RTT::NewData) {
+        while (_can_in.read(msg, false) == RTT::NewData) {
+            std::cout << base::Time::now() << " time=" << msg.time << ", can_time=" << msg.can_time << ", can_id=" << msg.can_id << ", can_data=";
+
             auto update = m_slave->process(msg);
             if (update.mode == StateMachine::PROCESSED_SDO &&
                 update.hasUpdatedObject(objectId, objectSubId)) {
+                if (discarded_messages) {
+                    std::cout << "\n" << base::Time::now() << " SDO reply after " << discarded_messages << "messages and " << (base::Time::now() - tic).toSeconds() << " seconds" << std::endl;
+                }
                 return;
+            }
+            else {
+                ++discarded_messages;
+                std::cout << " discarded" << std::endl;
             }
         }
         if (base::Time::now() > deadline) {
+            std::cout << base::Time::now() << " got write SDO_TIMEOUT after " << discarded_messages << "messages" << std::endl;
             exception(SDO_TIMEOUT);
             throw SDOReadTimeout();
         }
+        usleep(POLL_PERIOD_US);
     }
 }
 
@@ -174,26 +187,44 @@ void SlaveTask::writeSDOs(std::vector<canbus::Message> const& queries,
 }
 void SlaveTask::writeSDO(canbus::Message const& query, base::Time timeout)
 {
+    std::cerr << base::Time::now() << " entering writeSDO" << std::endl;
     _can_out.write(query);
 
     uint16_t objectId = getSDOObjectID(query);
     uint16_t objectSubId = getSDOObjectSubID(query);
 
+    base::Time tic = base::Time::now();
     base::Time deadline = base::Time::now() + timeout;
+    int discarded_messages = 0;
     while (true)
     {
         canbus::Message msg;
-        if (_can_in.read(msg, false) == RTT::NewData) {
+        while (_can_in.read(msg, false) == RTT::NewData) {
+            std::cout << base::Time::now() << " time=" << msg.time << ", can_time=" << msg.can_time << ", can_id=" << msg.can_id << ", can_data=";
+            for (size_t i = 0; i < 8; i++) {
+                std::cout << " " << static_cast<int>(msg.data[i]);
+            }
+
             auto update = m_slave->process(msg);
             if (update.mode == StateMachine::PROCESSED_SDO_INITIATE_DOWNLOAD &&
                 update.hasUpdatedObject(objectId, objectSubId)) {
+                if (discarded_messages) {
+                    std::cout << "\n" << base::Time::now() << " got write expected SDO reply after " << discarded_messages << "messages and " << (base::Time::now() - tic).toSeconds() << " seconds" << std::endl;
+                }
                 return;
             }
+            else {
+                ++discarded_messages;
+                std::cout << " discarded" << std::endl;
+            }
         }
+
         if (base::Time::now() > deadline) {
+            std::cout << base::Time::now() << " got write SDO_TIMEOUT after " << discarded_messages << "messages" << std::endl;
             exception(SDO_TIMEOUT);
             throw SDOWriteTimeout();
         }
+
         usleep(POLL_PERIOD_US);
     }
 }
