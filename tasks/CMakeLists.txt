@@ -1,12 +1,10 @@
 # Generated from orogen/lib/orogen/templates/tasks/CMakeLists.txt
 
 include(canopen_masterTaskLib)
-ADD_LIBRARY(${CANOPEN_MASTER_TASKLIB_NAME} SHARED 
+ADD_LIBRARY(${CANOPEN_MASTER_TASKLIB_NAME} SHARED
     ${CANOPEN_MASTER_TASKLIB_SOURCES})
 add_dependencies(${CANOPEN_MASTER_TASKLIB_NAME}
     regen-typekit)
-
-
 
 TARGET_LINK_LIBRARIES(${CANOPEN_MASTER_TASKLIB_NAME}
     ${OrocosRTT_LIBRARIES}
@@ -23,4 +21,7 @@ INSTALL(TARGETS ${CANOPEN_MASTER_TASKLIB_NAME}
 
 INSTALL(FILES ${CANOPEN_MASTER_TASKLIB_HEADERS}
     DESTINATION include/orocos/canopen_master)
+
+INSTALL(FILES test_helpers.rb
+    DESTINATION ${RUBY_LIBRARY_INSTALL_DIR}/canopen_master)
 

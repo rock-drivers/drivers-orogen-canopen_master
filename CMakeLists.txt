@@ -1,6 +1,9 @@
 project(canopen_master)
 cmake_minimum_required(VERSION 3.1)
 
+find_package(Rock)
+include(RockRuby)
+
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/.orogen/config")
 include(canopen_masterBase)
 
