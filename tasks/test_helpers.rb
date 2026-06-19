@@ -46,17 +46,21 @@ module CANOpen
 
         def canopen_handle_interaction(node_id, can_in, can_out)
             while (packet = can_out.read_new)
-                if canopen_sdo_upload?(node_id, packet)
-                    canopen_handle_sdo_upload(can_in, node_id, packet)
-                elsif canopen_sdo_download?(node_id, packet)
-                    canopen_handle_sdo_download(can_in, node_id, packet)
-                elsif canopen_nmt_command?(node_id, packet)
-                    canopen_handle_nmt_command(can_in, node_id, packet)
-                else
-                    puts "Ignored packet"
-                    pp packet
-                end
+                canopen_handle_packet(node_id, can_in, packet)
             end
+        end
+
+        def canopen_handle_packet(node_id, can_in, packet)
+          if canopen_sdo_upload?(node_id, packet)
+              canopen_handle_sdo_upload(can_in, node_id, packet)
+          elsif canopen_sdo_download?(node_id, packet)
+              canopen_handle_sdo_download(can_in, node_id, packet)
+          elsif canopen_nmt_command?(node_id, packet)
+              canopen_handle_nmt_command(can_in, node_id, packet)
+          else
+              puts "Ignored packet"
+              pp packet
+          end
         end
 
         def canopen_sdo_upload?(node_id, packet)
